@@ -16,7 +16,6 @@ import websocket
 answer = ""
 
 class Ws_Param(object):
-    # 初始化
     def __init__(self, APPID, APIKey, APISecret, Spark_url):
         self.APPID = APPID
         self.APIKey = APIKey
@@ -25,18 +24,14 @@ class Ws_Param(object):
         self.path = urlparse(Spark_url).path
         self.Spark_url = Spark_url
 
-    # 生成url
     def create_url(self):
-        # 生成RFC1123格式的时间戳
         now = datetime.now()
         date = format_date_time(mktime(now.timetuple()))
 
-        # 拼接字符串
         signature_origin = "host: " + self.host + "\n"
         signature_origin += "date: " + date + "\n"
         signature_origin += "GET " + self.path + " HTTP/1.1"
 
-        # 进行hmac-sha256进行加密
         signature_sha = hmac.new(self.APISecret.encode('utf-8'), signature_origin.encode('utf-8'),
                                  digestmod=hashlib.sha256).digest()
 
@@ -46,15 +41,27 @@ class Ws_Param(object):
 
         authorization = base64.b64encode(authorization_origin.encode('utf-8')).decode(encoding='utf-8')
 
-        # 将请求的鉴权参数组合为字典
         v = {
             "authorization": authorization,
             "date": date,
             "host": self.host
         }
-        # 拼接鉴权参数，生成url
         url = self.Spark_url + '?' + urlencode(v)
         return url
+
+def on_error(ws, error):
+    print("### error:", error)
+
+def on_close(ws, close_status_code, close_msg):
+    print("### closed ###")
+
+def on_open(ws):
+    thread.start_new_thread(run, (ws,))
+
+def run(ws, *args):
+    data = json.dumps(gen_params(appid=ws.appid, domain=ws.domain, question=ws.question,
+                                 max_tokens=ws.max_tokens, top_k=ws.top_k, temperature=ws.temperature))
+    ws.send(data)
 
 def on_message(ws, message):
     global answer
@@ -72,20 +79,6 @@ def on_message(ws, message):
         if status == 2:
             ws.close()
 
-def on_error(ws, error):
-    print("### error:", error)
-
-def on_close(ws, close_status_code, close_msg):
-    print("### closed ###")
-
-def on_open(ws):
-    thread.start_new_thread(run, (ws,))
-
-def run(ws, *args):
-    data = json.dumps(gen_params(appid=ws.appid, domain=ws.domain, question=ws.question,
-                                 max_tokens=ws.max_tokens, top_k=ws.top_k, temperature=ws.temperature))
-    ws.send(data)
-
 def gen_params(appid, domain, question, max_tokens, top_k, temperature):
     data = {
         "header": {
@@ -98,6 +91,7 @@ def gen_params(appid, domain, question, max_tokens, top_k, temperature):
                 "temperature": temperature,
                 "max_tokens": max_tokens,
                 "top_k": top_k,
+                
                 "auditing": "default"
             }
         },

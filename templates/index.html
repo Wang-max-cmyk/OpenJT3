@@ -8,7 +8,6 @@
     <link rel="shortcut icon" href="https://pic.imgdb.cn/item/67187ce0d29ded1a8c74d9f6.png" media="screen and (min-width: 481px &&max-width: 1024px)" type="image/x-icon">
     <link rel="shortcut icon" href="https://pic.imgdb.cn/item/67187ce0d29ded1a8c74da0e.jpg" media="screen and (min-width: 1025px)" type="image/x-icon">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="shortcut icon" href="{{ url_for('static', filename='favicon.ico') }}">
     <style>
     :root {
         --text-color: #333;
@@ -349,9 +348,6 @@
         const sendBtn = document.getElementById('send-btn');
         const newChatBtn = document.getElementById('new-chat');
         const themeSelect = document.getElementById('theme');
-        const maxLengthInput = document.getElementById('max-length');
-        const minLengthInput = document.getElementById('min-length');
-        const creativityInput = document.getElementById('creativity');
         const maxTokens = document.getElementById('max-tokens');
 
         function createNewChat() {
@@ -360,13 +356,13 @@
             if (chatName) {
                 const chatId = Date.now().toString();
                 chats3.push({ id: chatId, name: chatName, messages: [] });
-                saveChatToLocalStorage();
-                renderChatList();
+                chatToLocalStorage();
+                FchatList();
                 switchToChat(chatId);
             }
         }
 
-        function renderChatList() {
+        function FchatList() {
             chatList.innerHTML = '';
             chats3.forEach(chat => {
                 const li = document.createElement('li');
@@ -397,19 +393,19 @@
 
         function switchToChat(chatId) {
             currentChatId = chatId;
-            renderChatList();
-            renderChatMessages();
+            FchatList();
+            chatMessage();
         }
 
         function deleteChat(chatId) {
             if (confirm('确定要删除这个会话吗？')) {
                 chats3 = chats3.filter(chat => chat.id !== chatId);
-                saveChatToLocalStorage();
+                chatToLocalStorage();
                 if (currentChatId === chatId) {
                     currentChatId = chats3.length > 0 ? chats3[0].id : null;
                 }
-                renderChatList();
-                renderChatMessages();
+                FchatList();
+                chatMessage();
             }
         }
 
@@ -419,13 +415,13 @@
                 const newName = prompt("请输入新的会话名称", chat.name);
                 if (newName && newName !== chat.name) {
                     chat.name = newName;
-                    saveChatToLocalStorage();
-                    renderChatList();
+                    chatToLocalStorage();
+                    FchatList();
                 }
             }
         }
 
-        function renderChatMessages() {
+        function chatMessage() {
             chatMessages.innerHTML = '';
             const chat = chats3.find(c => c.id === currentChatId);
             if (chat) {
@@ -438,8 +434,8 @@
                     deleteBtn.innerHTML = '<i class="fas fa-trash"></i>';
                     deleteBtn.onclick = () => {
                         chat.messages = chat.messages.filter(m => m !== message);
-                        saveChatToLocalStorage();
-                        renderChatMessages();
+                        chatToLocalStorage();
+                        chatMessage();
                     };
                     messageElement.appendChild(deleteBtn);            
                     chatMessages.appendChild(messageElement);
@@ -448,62 +444,7 @@
             }
         }
 
-        // 在文档加载完成后添加以下代码
-document.addEventListener('DOMContentLoaded', function() {
-    const topKSlider = document.getElementById('top-k');
-    const topKValue = document.getElementById('top-k-value');
-    const temperatureSlider = document.getElementById('temperature');
-    const temperatureValue = document.getElementById('temperature-value');
-
-    topKSlider.addEventListener('input', function() {
-        topKValue.textContent = this.value;
-    });
-
-    temperatureSlider.addEventListener('input', function() {
-        temperatureValue.textContent = this.value;
-    });
-});
-
-async function sendMessage() {
-    const message = userInput.value.trim();
-    if (message && currentChatId) {
-        const chat = chats3.find(c => c.id === currentChatId);
-        chat.messages.push({ sender: 'user', content: message });
-        saveChatToLocalStorage();
-        renderChatMessages();
-        userInput.value = '';
-
-        try {
-            const response = await fetch('/api/chat', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    message: message,
-                    max_tokens: parseInt(document.getElementById('max-tokens').value),
-                    top_k: parseInt(document.getElementById('top-k').value),
-                    temperature: parseFloat(document.getElementById('temperature').value)
-                }),
-            });
-
-            if (!response.ok) {
-                throw new Error('网络响应不正常');
-            }
-
-            const data = await response.json();
-            const aiMessage = data.response;
-            chat.messages.push({ sender: 'ai', content: aiMessage });
-            saveChatToLocalStorage();
-            renderChatMessages();
-        } catch (error) {
-            console.error('发送消息出错:', error);
-            alert('发送消息失败，请重试。');
-        }
-    }
-}
-
-        function saveChatToLocalStorage() {
+        function chatToLocalStorage() {
             localStorage.setItem('chats3', JSON.stringify(chats3));
         }
 
@@ -521,16 +462,66 @@ async function sendMessage() {
         });
         themeSelect.addEventListener('change', changeTheme);
 
-        // 初始化
         if (chats3.length === 0) {
             createNewChat();
         } else {
-            renderChatList();
+            FchatList();
             switchToChat(chats3[0].id);
         }
 
-        // 应用保存的主题
-        changeTheme();
+        document.addEventListener('DOMContentLoaded', function() {
+            const topKSlider = document.getElementById('top-k');
+            const topKValue = document.getElementById('top-k-value');
+            const temperatureSlider = document.getElementById('temperature');
+            const temperatureValue = document.getElementById('temperature-value');
+
+            topKSlider.addEventListener('input', function() {
+                topKValue.textContent = this.value;
+            });
+
+            temperatureSlider.addEventListener('input', function() {
+                temperatureValue.textContent = this.value;
+            });
+        });
+
+        async function sendMessage() {
+            const message = userInput.value.trim();
+            if (message && currentChatId) {
+                const chat = chats3.find(c => c.id === currentChatId);
+                chat.messages.push({ sender: 'user', content: message });
+                chatToLocalStorage();
+                chatMessage();
+                userInput.value = '';
+
+                try {
+                    const response = await fetch('/api/chat', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            message: message,
+                            max_tokens: parseInt(document.getElementById('max-tokens').value),
+                            top_k: parseInt(document.getElementById('top-k').value),
+                            temperature: parseFloat(document.getElementById('temperature').value)
+                        }),
+                    });
+
+                    if (!response.ok) {
+                        throw new Error('网络响应不正常');
+                    }
+
+                    const data = await response.json();
+                    const aiMessage = data.response;
+                    chat.messages.push({ sender: 'ai', content: aiMessage });
+                    chatToLocalStorage();
+                    chatMessage();
+                } catch (error) {
+                    console.error('发送消息出错:', error);
+                    alert('发送消息失败，请重试。');
+                }
+            }
+        }
 
         maxTokens.addEventListener('input',function(){
             let value = parseInt(this.value);

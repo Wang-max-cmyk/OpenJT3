@@ -3,7 +3,6 @@ import SparkApi
 
 app = Flask(__name__)
 
-# 讯飞星火API配置
 appid = "92b4865f"
 api_secret = "M2ZjZDg0OTBjMTE2NTU3NjljYjIzZWNm"
 api_key = "d2f69b2a76b462e3222349a91b3bb7d1"
@@ -18,16 +17,14 @@ def index():
 def chat():
     data = request.json
     user_message = data['message']
-    max_tokens = data.get('max_tokens', 2048)
+    max_tokens = data.get('max_tokens', 4096)
     top_k = data.get('top_k', 4)
     temperature = data.get('temperature', 0.5)
 
-    # 准备对话上下文
     text = [
         {"role": "user", "content": user_message}
     ]
 
-    # 调用讯飞星火API
     SparkApi.answer = ""
     SparkApi.main(appid, api_key, api_secret, Spark_url, domain, text, max_tokens, top_k, temperature)
 
