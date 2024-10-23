@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JoTangLM 智能对话系统</title>
+    <link rel="shortcut icon" href="https://pic.imgdb.cn/item/67187ce0d29ded1a8c74da1a.png" media="screen and (max-width: 480px)" type="image/x-icon">
+    <link rel="shortcut icon" href="https://pic.imgdb.cn/item/67187ce0d29ded1a8c74d9f6.png" media="screen and (min-width: 481px &&max-width: 1024px)" type="image/x-icon">
+    <link rel="shortcut icon" href="https://pic.imgdb.cn/item/67187ce0d29ded1a8c74da0e.jpg" media="screen and (min-width: 1025px)" type="image/x-icon">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="shortcut icon" href="{{ url_for('static', filename='favicon.ico') }}">
+    <style>
+    :root {
+        --text-color: #333;
+        --message-user: #e1f0ff;
+        --message-ai: #f0f0f0;
+        --rename-color: #000;
+        --rename-hover: #f0f0f0;
+        --delete-color: #333;
+        --background: linear-gradient(45deg, #59d2ac 0%, #4682be 100%);
+    }
+
+    body {
+    font-family: 楷体;
+    margin: 0;
+    padding: 0;
+    color: var(--text-color);
+    display: flex;
+    height: 100vh;
+    background-image: var(--background);
+    }
+
+    .sidebar {
+        width: 336px;
+        height: 826px;
+        display: flex;
+        flex-direction: column;
+        border-right: 1px solid #e0e0e0;
+        position: fixed;
+    }
+
+    .main-content {
+        margin-left: 336px;
+        flex-grow: 1;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .aside-header {
+        background-color: #4a90e2;
+        color: white;
+        padding: 20px;
+        text-align: center;
+    }
+
+    .aside-title {
+        margin: 0;
+        font-size: 24px;
+    }
+
+    #new-chat {
+        background-color: #50c878;
+        color: white;
+        border: none;
+        padding: 10px 15px;
+        border-radius: 5px;
+        cursor: pointer;
+        margin: 15px;
+        transition: background-color 0.3s;
+    }
+
+    #new-chat:hover {
+        background-color: #45b06b;
+    }
+
+    #chat-list {
+        list-style-type: none;
+        padding: 0;
+        margin: 0;
+        overflow-y: auto;
+        flex-grow: 1;
+    }
+
+    #chat-list li {
+        padding: 10px 15px;
+        cursor: pointer;
+        transition: background-color 0.3s;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    #chat-list li:hover {
+        background-color: #87cede;
+    }
+
+    #chat-list li.active {
+        background-color: #69c0ff;
+        font-weight: bold;
+    }
+
+    .delete-btn {
+        background-color: transparent;
+        border: none;
+        cursor: pointer;
+        font-size: 16px;
+        padding: 0;
+        color: var(--delete-color);
+    }
+
+    .delete-btn:hover {
+        color: #ff7875;
+    }
+
+    .settings {
+        padding: 15px;
+        border-top: 1px solid #e0e0e0;
+    }
+
+    .setting-item {
+        margin-bottom: 20px;
+    }
+
+    .width {
+        width: 60px;
+    }
+
+    .chat-area {
+        flex-grow: 1;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .chat-messages {
+        flex-grow: 1;
+        padding: 20px;
+        overflow-y: auto;
+    }
+
+    .message {
+        max-width: 1200px;
+        margin-bottom: 15px;
+        padding: 10px 15px;
+        border-radius: 18px;
+        line-height: 1.4;
+        word-wrap: break-word;
+        overflow-wrap: break-word;
+        white-space: pre-wrap;
+    }
+
+    .user-message {
+        background-color: var(--message-user);
+        align-self: flex-end;
+        margin-left: auto;
+    }
+
+    .ai-message {
+        background-color: var(--message-ai);
+        align-self: flex-start;
+    }
+
+    .input-area {
+        display: flex;
+        padding: 20px;
+        border-top: 1px solid #e0e0e0;
+    }
+
+    #user-input {
+        flex-grow: 1;
+        padding: 10px;
+        border: 1px solid #ccc;
+        border-radius: 5px;
+        resize: none;
+        font-size: 16px;
+    }
+
+    #send-btn {
+        background-color: #4a90e2;
+        color: white;
+        border: none;
+        padding: 10px 30px;
+        border-radius: 5px;
+        margin-left: 10px;
+        cursor: pointer;
+        transition: background-color 0.3s;
+        font-size: 22px;
+    }
+
+    #send-btn:hover {
+        background-color: #3a7bc8;
+    }
+
+    body.dark-theme {
+        --text-color: #f0f0f0;
+        --message-user: #4a4a4a;
+        --message-ai: #3a3a3a;
+        --rename-color: #fff;
+        --rename-hover: #000;
+        --delete-color: #5ab7b2;
+        --background: linear-gradient(45deg, #2d3648 0%, #1a2030 100%);
+    }
+
+    .rename-btn {
+        background-color: transparent;
+        border: none;
+        cursor: pointer;
+        font-size: 16px;
+        padding: 0;
+        position: absolute;
+        margin-left: -15px;
+        color: var(--rename-color);
+    }
+
+    .rename-btn:hover {
+        color: var(--rename-hover);
+    }
+
+    #chat-list li {
+        position: relative;
+        border: 0.1px dotted #000;
+    }
+
+    .rangeValue {
+        position: relative;
+        font-size: 14px;
+        color: #3a7bc8;
+    }
+
+    .range{
+        position: relative;
+        top: 3.5px;
+    }
+
+    @media screen and (max-width: 768px) {
+        body {
+            flex-direction: column;
+        }
+
+        .sidebar {
+            width: 100%;
+            height: auto;
+            position: static;
+            border-right: none;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .main-content {
+            margin-left: 0;
+        }
+
+        .aside-header {
+            padding: 10px;
+        }
+
+        .aside-title {
+            font-size: 20px;
+        }
+
+        #new-chat {
+            margin: 10px;
+        }
+
+        .settings {
+            padding: 10px;
+        }
+
+        .setting-item {
+            margin-bottom: 10px;
+        }
+
+        .chat-area {
+            height: calc(100vh - 200px);
+        }
+
+        #chat-messages {
+            padding: 10px;
+        }
+
+        .message {
+            max-width: 90%;
+        }
+
+        .input-area {
+            padding: 10px;
+        }
+
+        #user-input {
+            font-size: 14px;
+        }
+
+        #send-btn {
+            padding: 8px 20px;
+            font-size: 18px;
+        }
+    }
+    </style>
+    </style>
+</head>
+<body>
+    <aside class="sidebar">
+        <div class="aside-header">
+            <h1 class="aside-title">JoTangLM</h1>
+        </div>
+        <button id="new-chat">新建会话</button>
+        <ul id="chat-list"></ul>
+        <div class="settings">
+            <h2>设置</h2>
+            <div class="setting-item">
+                <label for="theme">主题：</label>
+                <select id="theme">
+                    <option value="light">浅色</option>
+                    <option value="dark">深色</option>
+                </select>
+            </div>
+            <div class="setting-item">
+                <label for="max-tokens">最大回复长度（tokens）：</label>
+                <input type="number" id="max-tokens" min="1" max="8192" value="4096" class="width">
+            </div>
+            <div class="setting-item">
+                <label for="top-k">灵活度（1-6）：</label>
+                <input type="range" id="top-k" min="1" max="6" step="1" value="4" class="range">
+                <span id="top-k-value" class="rangeValue">4</span>
+            </div>
+            <div class="setting-item">
+                <label for="temperature">随机性（0.1-1）：</label>
+                <input type="range" id="temperature" min="0.1" max="1" step="0.1" value="0.5" class="range">                
+                <span id="temperature-value" class="rangeValue">0.5</span>
+            </div>
+        </div>
+    </aside>
+
+    <main class="main-content">
+        <div class="chat-area">
+            <div id="chat-messages" class="chat-messages"></div>
+            <div class="input-area">
+                <textarea id="user-input" placeholder="输入您的问题..." rows="3"></textarea>
+                <button id="send-btn"><i class="fas fa-paper-plane"></i></button>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        let currentChatId = null;
+        let chats3 = JSON.parse(localStorage.getItem('chats3')) || [];
+
+        const chatList = document.getElementById('chat-list');
+        const chatMessages = document.getElementById('chat-messages');
+        const userInput = document.getElementById('user-input');
+        const sendBtn = document.getElementById('send-btn');
+        const newChatBtn = document.getElementById('new-chat');
+        const themeSelect = document.getElementById('theme');
+        const maxLengthInput = document.getElementById('max-length');
+        const minLengthInput = document.getElementById('min-length');
+        const creativityInput = document.getElementById('creativity');
+        const maxTokens = document.getElementById('max-tokens');
+
+        function createNewChat() {
+            const defaultName = `会话 ${chats3.length + 1}`;
+            const chatName = prompt("请输入会话名称", defaultName);
+            if (chatName) {
+                const chatId = Date.now().toString();
+                chats3.push({ id: chatId, name: chatName, messages: [] });
+                saveChatToLocalStorage();
+                renderChatList();
+                switchToChat(chatId);
+            }
+        }
+
+        function renderChatList() {
+            chatList.innerHTML = '';
+            chats3.forEach(chat => {
+                const li = document.createElement('li');
+                li.textContent = chat.name;
+                li.onclick = () => switchToChat(chat.id);
+                if (chat.id === currentChatId) {
+                    li.classList.add('active');
+                }
+                const deleteBtn = document.createElement('button');
+                deleteBtn.classList.add('delete-btn');
+                deleteBtn.innerHTML = '<i class="fas fa-trash"></i>';
+                deleteBtn.onclick = (e) => {
+                    e.stopPropagation();
+                    deleteChat(chat.id);
+                };
+                const renameBtn = document.createElement('button');
+                renameBtn.innerHTML = '&#x270E;';
+                renameBtn.className = 'rename-btn';
+                renameBtn.onclick = (e) => {
+                    e.stopPropagation();
+                    renameChat(chat.id);
+                };
+                li.appendChild(renameBtn);
+                li.appendChild(deleteBtn);
+                chatList.appendChild(li);
+            });
+        }
+
+        function switchToChat(chatId) {
+            currentChatId = chatId;
+            renderChatList();
+            renderChatMessages();
+        }
+
+        function deleteChat(chatId) {
+            if (confirm('确定要删除这个会话吗？')) {
+                chats3 = chats3.filter(chat => chat.id !== chatId);
+                saveChatToLocalStorage();
+                if (currentChatId === chatId) {
+                    currentChatId = chats3.length > 0 ? chats3[0].id : null;
+                }
+                renderChatList();
+                renderChatMessages();
+            }
+        }
+
+        function renameChat(chatId) {
+            const chat = chats3.find(c => c.id === chatId);
+            if (chat) {
+                const newName = prompt("请输入新的会话名称", chat.name);
+                if (newName && newName !== chat.name) {
+                    chat.name = newName;
+                    saveChatToLocalStorage();
+                    renderChatList();
+                }
+            }
+        }
+
+        function renderChatMessages() {
+            chatMessages.innerHTML = '';
+            const chat = chats3.find(c => c.id === currentChatId);
+            if (chat) {
+                chat.messages.forEach(message => {
+                    const messageElement = document.createElement('div');
+                    messageElement.classList.add('message', message.sender === 'user' ? 'user-message' : 'ai-message');
+                    messageElement.textContent = message.content;
+                    const deleteBtn = document.createElement('button');
+                    deleteBtn.classList.add('delete-btn');
+                    deleteBtn.innerHTML = '<i class="fas fa-trash"></i>';
+                    deleteBtn.onclick = () => {
+                        chat.messages = chat.messages.filter(m => m !== message);
+                        saveChatToLocalStorage();
+                        renderChatMessages();
+                    };
+                    messageElement.appendChild(deleteBtn);            
+                    chatMessages.appendChild(messageElement);
+                });
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+            }
+        }
+
+        // 在文档加载完成后添加以下代码
+document.addEventListener('DOMContentLoaded', function() {
+    const topKSlider = document.getElementById('top-k');
+    const topKValue = document.getElementById('top-k-value');
+    const temperatureSlider = document.getElementById('temperature');
+    const temperatureValue = document.getElementById('temperature-value');
+
+    topKSlider.addEventListener('input', function() {
+        topKValue.textContent = this.value;
+    });
+
+    temperatureSlider.addEventListener('input', function() {
+        temperatureValue.textContent = this.value;
+    });
+});
+
+async function sendMessage() {
+    const message = userInput.value.trim();
+    if (message && currentChatId) {
+        const chat = chats3.find(c => c.id === currentChatId);
+        chat.messages.push({ sender: 'user', content: message });
+        saveChatToLocalStorage();
+        renderChatMessages();
+        userInput.value = '';
+
+        try {
+            const response = await fetch('/api/chat', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    message: message,
+                    max_tokens: parseInt(document.getElementById('max-tokens').value),
+                    top_k: parseInt(document.getElementById('top-k').value),
+                    temperature: parseFloat(document.getElementById('temperature').value)
+                }),
+            });
+
+            if (!response.ok) {
+                throw new Error('网络响应不正常');
+            }
+
+            const data = await response.json();
+            const aiMessage = data.response;
+            chat.messages.push({ sender: 'ai', content: aiMessage });
+            saveChatToLocalStorage();
+            renderChatMessages();
+        } catch (error) {
+            console.error('发送消息出错:', error);
+            alert('发送消息失败，请重试。');
+        }
+    }
+}
+
+        function saveChatToLocalStorage() {
+            localStorage.setItem('chats3', JSON.stringify(chats3));
+        }
+
+        function changeTheme() {
+            document.body.classList.toggle('dark-theme', themeSelect.value === 'dark');
+        }
+
+        newChatBtn.addEventListener('click', createNewChat);
+        sendBtn.addEventListener('click', sendMessage);
+        userInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+        });
+        themeSelect.addEventListener('change', changeTheme);
+
+        // 初始化
+        if (chats3.length === 0) {
+            createNewChat();
+        } else {
+            renderChatList();
+            switchToChat(chats3[0].id);
+        }
+
+        // 应用保存的主题
+        changeTheme();
+
+        maxTokens.addEventListener('input',function(){
+            let value = parseInt(this.value);
+            if (value < 1){
+                this.value = 1;
+            }
+            if (value > 8192){
+                this.value = 8192;
+            }
+        });
+    </script>
+</body>
+</html>
