@@ -1,13 +1,14 @@
 from flask import Flask, request, jsonify, render_template
 import SparkApi
+import os
 
 app = Flask(__name__)
 
-appid = "92b4865f"
-api_secret = "M2ZjZDg0OTBjMTE2NTU3NjljYjIzZWNm"
-api_key = "d2f69b2a76b462e3222349a91b3bb7d1"
-domain = "generalv3.5"
-Spark_url = "wss://spark-api.xf-yun.com/v3.5/chat"
+appid = os.environ.get('SPARK_APPID')
+api_secret = os.environ.get('SPARK_API_SECRET')
+api_key = os.environ.get('SPARK_API_KEY')
+domain = os.environ.get('SPARK_DOMAIN', "generalv3.5")
+Spark_url = os.environ.get('SPARK_URL', "wss://spark-api.xf-yun.com/v3.5/chat")
 
 @app.route('/')
 def index():
